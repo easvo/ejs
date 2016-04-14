@@ -1,0 +1,33 @@
+<html>
+    <head>
+        <script type="text/javascript" src="bin/ejs.js"></script>
+        <script>
+        //console.log("hello");
+            var doc = new ejs.xml.XmlDocument();
+            doc.root = new ejs.xml.XmlNode('a:aria', [{name : 'help', value : 'never another'}]);
+            var node = new ejs.xml.XmlNode('help', [{name : 'haha', value : 'sure'}]);
+            doc.root.nodes.push(node);
+            
+            //console.log(doc);
+            
+            //console.log(doc.write({pretty: true}), doc.toBinary());
+            
+            //var workbook = new ejs.xl.Workbook();
+            
+            //console.log(workbook.writeXml());
+            
+            var test = 'abbabbaaabababaaaaabbabaa';
+            //var test = "Blahblahblahblahblahblahblah";
+            test = 'Absolutely, The Good Wife is the best show in television to date, and if I dare say it, in forever.';
+            
+            var lz = new ejs.zip.LZ77();
+            //var lzw = new ejs.zip.LZW();
+            console.log('input', test);
+            console.log('output', lz.compress(test));
+        
+        </script>
+    </head>
+    <body>
+        
+    </body>
+</html>
