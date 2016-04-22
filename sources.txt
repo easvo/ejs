@@ -1,0 +1,5 @@
+http://commandlinefanatic.com/cgi-bin/showarticle.cgi?article=art001
+https://github.com/madler/zlib/blob/master/contrib/puff/puff.c
+http://www.zlib.net/feldspar.html
+https://github.com/nodeca/pako/blob/master/lib/zlib/deflate.js#L300
+https://www.w3.org/Graphics/PNG/RFC-1951#algorithm

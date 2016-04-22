@@ -42,7 +42,6 @@ ejs.xml.XmlDocument.prototype.charToBinaryUTF8 = function(c, padding){
     return str;    
 }
 
-
 ejs.xml.XmlDocument.prototype.charToBinary = function(c, padding){
     padding = padding === undefined ? 8 : padding;
     var str = c.charCodeAt(0).toString(2);

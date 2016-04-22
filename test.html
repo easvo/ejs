@@ -24,6 +24,16 @@
             //var lzw = new ejs.zip.LZW();
             console.log('input', test);
             console.log('output', lz.compress(test));
+            
+            var data = new ArrayBuffer(8);
+            var view = new Uint8Array(data);
+            view[0] = 255;
+            view[1] = 150;
+            view[2] = 255;
+            
+            ejs.helper.saveText('Never.txt', 'This is what happens');
+            
+
         
         </script>
     </head>
