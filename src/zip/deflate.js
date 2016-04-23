@@ -8,6 +8,11 @@ ejs.zip.HuffmanNode = function(){
     this.one; // Node
 }
 
+ejs.zip.HuffmanRange = function(end, length){
+    this.end = end;
+    this.length = length;
+}
+
 ejs.zip.LZ77 = function(){
     
 }
@@ -46,7 +51,7 @@ ejs.zip.LZ77.prototype.compress = function(input){
             found = dictionary.indexOf(testSequence);
         }
                                         
-        console.log(pre, nextSequence, testSequence[testSequence.length - 1], i, dictionary);
+        //console.log(pre, nextSequence, testSequence[testSequence.length - 1], i, dictionary);
         var offset = i  - pre;
         var length = nextSequence.length;
         var nextCharacter = input[cursor] || '$';
@@ -55,7 +60,7 @@ ejs.zip.LZ77.prototype.compress = function(input){
         else  result = '<' + offset + ',' + length + ',' + nextCharacter + '>';                        
         i = cursor;
         output += result;
-        console.log(result);
+        //console.log(result);
         
     }
     
