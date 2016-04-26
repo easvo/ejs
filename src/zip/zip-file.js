@@ -15,6 +15,15 @@ ejs.zip.ZipFile.prototype.addFile = function(path, content){
     
 }
 
+ejs.zip.ZipFile.prototype.createBlock = function(){
+    // bit 0        1 if last block in the data
+    // bit 1 - 2    00 if raw, 01 fixed, 10 dynamic
+    
+    
+    // 0b110 common
+    
+}
+
 ejs.zip.ZipFile.prototype.save = function(name){
     // Header format
     /*
