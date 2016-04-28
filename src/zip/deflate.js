@@ -92,10 +92,24 @@ ejs.zip.Huffman = function(source){
         freq.push(node);
         i++;
     }
-    
-    
-    
+            
     var root = freq[0];
+    
+    function getCodeLengths(node, depth){        
+        depth = depth === undefined ? 0 : depth;
+        var codes = [], ones = [], zeroes = [];
+        if (node.zero){
+            zeroes = getCodeLengths(node.zero, depth + 1);
+        }if (node.one){
+            ones = getCodeLengths(node.one, depth + 1);
+        }
+        
+        if(node.value){
+            codes.push({ length : depth, code : node.value});
+        }
+                
+        return codes.concat(zeroes).concat(ones);                
+    }
     
     function getCodes(node, prefix){        
         prefix = prefix === undefined ? '' : prefix;
@@ -113,37 +127,33 @@ ejs.zip.Huffman = function(source){
         return codes.concat(zeroes).concat(ones);                
     }
     
-    var codes = getCodes(root);
+    //var codes = getCodes(root);
     
+    var codes = getCodeLengths(root);
     
-    /// ABCDEFGH
-    var testCodes = [{ prefix : '000'},
-    { prefix : '000'},
-    { prefix : '000'},
-    { prefix : '000'},
-    { prefix : '000'},
-    { prefix : '00'},
-    { prefix : '0000'},
-    { prefix : '0000'}];
-    
-    this.test(codes);
+    codes.sort(function(a, b){
+        if (a.length === b.length){
+            return a.code.localeCompare(b.code);
+        }
+        else return a.length - b.length;
+    });
+        
+    this.codes = this.canonicalize(codes);
     
     
     //console.log(freq, codes);
     
 }
 
-ejs.zip.Huffman.prototype.test = function(codes){
+ejs.zip.Huffman.prototype.canonicalize = function(codes){
     var N = [0];
     var max = 0;
     
     for(var i = 0; i < codes.length; i++){        
-        N[codes[i].prefix.length] = N[codes[i].prefix.length] || 0;
-        N[codes[i].prefix.length]++;
-        max = Math.max(max, codes[i].prefix.length);
+        N[codes[i].length] = N[codes[i].length] || 0;
+        N[codes[i].length]++;
+        max = Math.max(max, codes[i].length);
     }
-    
-    console.log(N);
     
     code = 0;
     nextCode = [];
@@ -155,17 +165,22 @@ ejs.zip.Huffman.prototype.test = function(codes){
     
     
     for(var i = 0; i < codes.length; i++){
-        var len = codes[i].prefix.length;
+        var len = codes[i].length;
         if (len != 0){
-            codes[i].coded = nextCode[len];
-            codes[i].b = codes[i].coded.toString(2);
+            codes[i].next = nextCode[len];
+            codes[i].bs = codes[i].next.toString(2);
+            while(codes[i].bs.length < codes[i].length){
+                codes[i].bs = '0' + codes[i].bs;
+            }
             nextCode[len]++;
         }
     }
     
-    console.log('Next', nextCode, codes);
+    codes = codes.sort(function(a, b){
+        return a.code.localeCompare(b.code);
+    });
     
-    
+    return codes;          
 }
 
 ejs.zip.HuffmanNode = function(){
