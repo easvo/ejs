@@ -47,66 +47,32 @@
             }
             
             var buffer = new ejs.zip.BitStream();
+                                    
+            buffer.writeByte(ejs.zip.FILE_HEADER, 4, true);
             
-            
-            val = 14500;
-            var a = 5;
-            var needed = 5;
-            var b = a << needed;
-            var fromB = val >> (14 - needed);
-            b |= fromB;
-            
-            var remaining = val << needed;
-            
-            var mask = 0;
-            
-            var left = 14 - needed;
-            
-            while (needed--){
-                mask <<= 1;
-                mask |= 1;
-            }
-            
-            mask <<= left;
-            
-            // Clear bits
-            //console.log(val & ~mask);
-            
-            //console.log(mask.toString(2), mask);
-            
-            
-            
-            //console.log(a.toString(2), b.toString(2));
-            
-            
-            //buffer.writeByte(15);
-            //buffer.writeByte(32);
-            
-            buffer.write(50);
             console.log(buffer);
-            buffer.flush();
+            //buffer.flush();
             //buffer.writeByte(20);
             //buffer.write(1);
             //buffer.write(259);
             
-            buffer.flush();            
+            //buffer.flush();            
            
             console.log(buffer.asBinaryString());
+            console.log(buffer.asHexString());
             
-            buffer.seek(0);
+            //buffer.seek(0);
             
-            buffer.read(6);
+            //buffer.read(8);
             
             var num = 5;
             
-            console.log((num).toString(2), buffer.reverse(num).toString(2));
-                        
+            //console.log((num).toString(2), buffer.reverse(num).toString(2));                                                            
             
             
-            
-            
-            
-            //var file = new ejs.zip.ZipFile();
+            var file = new ejs.zip.ZipFile();
+            file.addFile('example.txt', 'This is some example text');
+            file.save();
             //file.save();
             
 

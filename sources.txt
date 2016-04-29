@@ -5,3 +5,6 @@ https://github.com/nodeca/pako/blob/master/lib/zlib/deflate.js#L300
 https://www.w3.org/Graphics/PNG/RFC-1951#algorithm
 
 https://adayinthelifeof.nl/2010/06/02/deflating-the-universe/
+
+Zip structure
+https://users.cs.jmu.edu/buchhofp/forensics/formats/pkzip.html

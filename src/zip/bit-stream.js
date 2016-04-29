@@ -14,13 +14,7 @@ ejs.zip.BitStream.prototype.write = function(val, l, lsb){
     // Bit to use
     l = l === undefined || l === null ? bits : l;
     
-    // 34592 1000 1000 1000 1000
-    // val = 0b1000100010001000
-    
     var space = 8 - this.pendingLength;
-    
-    // Room for seven in example
-    // Input has 16 length, 1 sig bits
     
     // Trim if higher than bits to insert
     space = space > l ? l : space;
@@ -30,16 +24,12 @@ ejs.zip.BitStream.prototype.write = function(val, l, lsb){
     this.pendingLength += space;
     
     // Get from val
-    // 16 - 1
     var grab = val >> (l - space);
     
-    // Append to pending
     this.pending |= grab;
     
-    // Mask what was taken
     var mask = 0;
-    
-    
+        
     l -= space;
     var i = space;
     while (i--){
@@ -91,14 +81,27 @@ ejs.zip.BitStream.prototype.flush = function(){
     } 
 }
 
-ejs.zip.BitStream.prototype.writeByte = function(val){
-    if (this.position + 1 > this.buffer.byteLength){
-        this.resize(this.buffer.byteLength + 1);
+ejs.zip.BitStream.prototype.writeByte = function(val, n, msb){
+    n = n === undefined ? 1 : n;
+    if (this.position + n > this.buffer.byteLength){
+        this.resize(this.buffer.byteLength + n);
     }
     
-    var view = new Uint8Array(this.buffer, this.position, 1);
-    view[0] = val;
-    this.position++;
+    var view = new Uint8Array(this.buffer, this.position, n);
+    
+    if (msb){
+        for (var j = 0; j < n; j++){
+            var shift = 8 * j;
+            view[j] = (val >>> shift) & 0xFF;
+        }
+    }else{
+        for (var j = 0, i = n - 1; j < n; j++, i--){
+            var shift = 8 * i;
+            view[j] = (val >>> shift) & 0xFF;
+        }
+    }
+    
+    this.position += n;
 }
 
 ejs.zip.BitStream.prototype.getBitLength = function(val){
@@ -134,19 +137,26 @@ ejs.zip.BitStream.prototype.read = function(n){
     
     console.log(this.cache.toString(2), 8 - n);
     
-    var mask = 0;     
-    var l = 8 - n;   
+    var mask = 0xFF;     
+    var l = 8 - n;
     
-    while (l--){
-        mask <<= 1;
-        mask |= 1;
+    var val = this.cache << l;
+    val &= mask;
+    val >>= l;
+    
+     
+    
+    
+    // while (l--){
+    //     mask <<= 1;
+    //     mask |= 1;
         
-        this.bitPosition++;
-    }
+    //     this.bitPosition++;
+    // }
     
-    mask <<= n;
+    // mask <<= n;
     
-    var val = this.cache & ~mask;
+    // var val = this.cache & ~mask;
     
     console.log(val);
     
@@ -201,7 +211,7 @@ ejs.zip.BitStream.prototype.asBinaryString = function(){
         strOutput += this.Uint8ToBinary(this.getPaddedPending());
     }       
     return strOutput;
-}
+} 
 
 ejs.zip.BitStream.prototype.Uint8ToBinary = function(c){   
     var str = c.toString(2);
@@ -210,4 +220,15 @@ ejs.zip.BitStream.prototype.Uint8ToBinary = function(c){
         str = '0' + str;
     }    
     return str;    
+}
+
+ejs.zip.BitStream.prototype.asHexString = function(){
+    var output = new Uint8Array(this.buffer);
+    var strOutput = '';
+    for (var i = 0; i < output.length; i++){
+        var raw = output[i].toString(16);
+        if (raw.length === 1) raw = '0' + raw;
+        strOutput += raw + (i % 2 !== 0 ? ' ' : '');
+    }
+    return strOutput;
 }
