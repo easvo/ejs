@@ -232,3 +232,9 @@ ejs.zip.BitStream.prototype.asHexString = function(){
     }
     return strOutput;
 }
+
+ejs.zip.BitStream.prototype.writeString = function(content){
+    for (var i = 0; i < content.length;i++){
+        this.writeByte(content[i].charCodeAt(0));
+    }
+}

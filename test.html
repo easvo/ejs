@@ -19,7 +19,7 @@
             
             var test = 'abbabbaaabababaaaaabbabaa';
             //var test = "Blahblahblahblahblahblahblah";
-            test = 'Absolutely, The Good Wife is the best show in television to date, and if I dare say it, in forever.';
+            test = 'Of the night, it is well. What is good of the night? Night brings with it the covering darkness that veils all and hinders our sight.';
             
             var lz = new ejs.zip.LZ77();
             //var lzw = new ejs.zip.LZW();
@@ -48,9 +48,9 @@
             
             var buffer = new ejs.zip.BitStream();
                                     
-            buffer.writeByte(ejs.zip.FILE_HEADER, 4, true);
+            //buffer.writeByte(ejs.zip.FILE_HEADER, 4, true);
             
-            console.log(buffer);
+            //console.log(buffer);
             //buffer.flush();
             //buffer.writeByte(20);
             //buffer.write(1);
@@ -58,8 +58,8 @@
             
             //buffer.flush();            
            
-            console.log(buffer.asBinaryString());
-            console.log(buffer.asHexString());
+            //console.log(buffer.asBinaryString());
+            //console.log(buffer.asHexString());
             
             //buffer.seek(0);
             
@@ -71,7 +71,20 @@
             
             
             var file = new ejs.zip.ZipFile();
+            
+            buffer.writeString('Wikipedia');
+            console.log(buffer);
+            
+            //console.log(file.crc32(buffer.buffer));
+            
             file.addFile('example.txt', 'This is some example text');
+            file.addFile('display.txt', 'Part two of the data');
+            
+            var test = 'This is some example text';
+            
+            var crc = file.crc32(test);
+            var adler = file.adler32(test);
+            
             file.save();
             //file.save();
             
