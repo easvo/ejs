@@ -64,7 +64,109 @@ ejs.zip.Deflate.prototype.distances = [{ bits : 0, distanceBase : 1, code : 0 },
 { bits : 13, distanceBase : 16385, code : 28 },
 { bits : 13, distanceBase : 24577, code : 29 }];
 
-ejs.zip.Huffman = function(source){   
+// 0 - 15 = codelengths
+// 16 copy prev 3 - 6, 2 bits
+// 17 copy prev 3 - 10
+// 18 copy prev 11 - 138
+ejs.zip.Deflate.prototype.order = [16,17,18,0,8,7,9,6,10,5,11,4,12,3,13,2,14,1,15];
+
+ejs.zip.Deflate.prototype.inflate = function(stream){
+    var blockPosition = stream.read(1);
+    
+    var method = stream.read(2);
+       
+    if (method === 1){ // Fixed
+        
+    }
+    else if (method === 2) {// dynamic
+        var hlit = stream.read(5) + 257;
+        var hdist = stream.read(5) + 1;
+        var hclen = stream.read(4) + 4;
+        
+        console.log(hlit, hdist, hclen);
+        
+        var lengths = [];
+        
+        // Code lengths code lengths
+        for (var i = 0; i < hclen; i++){
+            lengths[this.order[i]] = stream.read(3);
+        }
+        
+        for (;i<19;i++){
+            lengths[this.order[i]] = 0;
+        }
+        
+        var ranges = [];
+        
+        for (var i = 0; i < lengths.length; i++){
+            if (lengths[i] !== 0){
+                ranges.push({ code : i, length : lengths[i]});
+            }
+        }
+        
+        var huff = new ejs.zip.Huffman();
+        var codes = huff.canonicalize(ranges);
+        
+        this.construct(lengths, 19);
+        
+        console.log(ranges, lengths, codes);        
+    } 
+}
+
+
+ejs.zip.Deflate.prototype.construct = function(length, n){
+    MAXBITS = 15;
+    var symbol;         /* current symbol when stepping through length[] */
+    var len;            /* current length when stepping through h->count[] */
+    var left;           /* number of possible codes left of current length */
+    var offs=[];      /* offsets in symbol table for each length */
+    
+    var h = {
+        count : [],
+        symbol : []
+    };
+
+    /* count number of codes of each length */
+    for (len = 0; len <= MAXBITS; len++)
+        h.count[len] = 0;
+    for (symbol = 0; symbol < n; symbol++)
+        (h.count[length[symbol]])++;   /* assumes lengths are within bounds */
+    if (h.count[0] == n)               /* no codes! */
+        return 0;                       /* complete, but decode() will fail */
+
+    /* check for an over-subscribed or incomplete set of lengths */
+    left = 1;                           /* one possible code of zero length */
+    for (len = 1; len <= MAXBITS; len++) {
+        left <<= 1;                     /* one more bit, double codes left */
+        left -= h.count[len];          /* deduct count from possible codes */
+        if (left < 0)
+            return left;                /* over-subscribed--return negative */
+    }                                   /* left > 0 means incomplete */
+
+    /* generate offsets into symbol table for each length for sorting */
+    offs[1] = 0;
+    for (len = 1; len < MAXBITS; len++)
+        offs[len + 1] = offs[len] + h.count[len];
+
+    /*
+     * put symbols in table sorted by length, by symbol order within each
+     * length
+     */
+    for (symbol = 0; symbol < n; symbol++)
+        if (length[symbol] != 0)
+            h.symbol[offs[length[symbol]]++] = symbol;
+            
+    console.log(h);
+
+    /* return zero for complete set, positive for incomplete set */
+    return left;
+}
+
+ejs.zip.Huffman = function(){
+    
+}
+
+ejs.zip.Huffman.prototype.encode = function(source){
     var key = {};
     
     for (var i = 0; i < source.length; i++){
@@ -146,6 +248,7 @@ ejs.zip.Huffman = function(source){
 }
 
 ejs.zip.Huffman.prototype.canonicalize = function(codes){
+    console.log(codes);
     var N = [0];
     var max = 0;
     
@@ -176,9 +279,9 @@ ejs.zip.Huffman.prototype.canonicalize = function(codes){
         }
     }
     
-    codes = codes.sort(function(a, b){
-        return a.code.localeCompare(b.code);
-    });
+    // codes = codes.sort(function(a, b){
+    //     return a.code.localeCompare(b.code);
+    // });
     
     return codes;          
 }

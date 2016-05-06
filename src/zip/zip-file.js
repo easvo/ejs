@@ -2,9 +2,7 @@ ejs.zip.FILE_HEADER = 0x04034b50;
 ejs.zip.CENTRAL_DIRECTORY_HEADER = 0x02014b50;
 ejs.zip.HEADER_SIGNATURE = 0x05054b50;
 ejs.zip.EOCD_SIGNATURE = 0x06054b50;
-ejs.zip.CRC32_MAGIC_NUMBER = 0xEDB88320; //0xDEBB20E3;
-//ejs.zip.CRC32_MAGIC_NUMBER = 0xDEBB20E3;
-
+ejs.zip.CRC32_MAGIC_NUMBER = 0xEDB88320; 
 
 ejs.zip.ZipFile = function () {
     this.contents = [];

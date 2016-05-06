@@ -35,14 +35,15 @@
             //ejs.helper.saveText('Never.txt', 'This is what happens');
             
             window.onload = function(){
-                var huff = new ejs.zip.Huffman(test);
+                var huff = new ejs.zip.Huffman();
+                huff.encode(test);
                 var op = d3.select('#output');
                 var codeElements = op.selectAll('div.codes').data(huff.codes);
                 codeElements.enter().append('div').attr('class', 'codes');
                 
                 //console.log(huff);
                 codeElements.text(function(d){
-                    return d.code + ' - ' + d.bs;
+                    return d.code + ' - ' + d.bs + ' - ' + d.next;
                 });
             }
             
@@ -78,14 +79,28 @@
             //console.log(file.crc32(buffer.buffer));
             
             file.addFile('example.txt', 'This is some example text');
-            file.addFile('display.txt', 'Part two of the data');
+            file.addFile('moo/display.txt', 'Part two of the data');
+            file.addFile('moo/cow/why would you say that.txt', 'Part two of the data');
             
             var test = 'This is some example text';
             
             var crc = file.crc32(test);
             var adler = file.adler32(test);
             
-            file.save();
+            var blahHex = 'edc4210100300800b02a4f408a170185a0bf26056e13fb93fd4a92244992244992244992a4ab6201';
+            
+            var blahBs = new ejs.zip.BitStream();
+            blahBs.writeHexString(blahHex);
+            console.log(new Uint8Array(blahBs.buffer));
+            
+            blahBs.position = 0;
+            
+            var deflater = new ejs.zip.Deflate();
+            deflater.inflate(blahBs);
+                                 
+             
+            
+            //file.save();
             //file.save();
             
 

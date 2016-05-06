@@ -1,10 +1,20 @@
 ejs.zip.BitStream = function(){
     this.buffer = new ArrayBuffer(0);
     this.position = 0;
+    this.bitPosition = 0;
     this.pending = 0;
     this.pendingLength = 0;
     this.size = 1024;
 }
+
+Object.defineProperty(ejs.zip.BitStream.prototype, 'position', {
+    get : function(){
+        return this._position;
+    },
+    set : function(val){
+        this.seek(val);
+    }
+});
 
 ejs.zip.BitStream.prototype.write = function(val, l, lsb){
     
@@ -131,22 +141,75 @@ ejs.zip.BitStream.prototype.resize = function(size){
  */
 ejs.zip.BitStream.prototype.read = function(n){
     n = n === undefined ? 1 : n;
-    var output = 0;
     
-    this.cache = this.readByte();
+    if (this.cache === null) this.cache = this.readByte();
     
-    console.log(this.cache.toString(2), 8 - n);
+    var m = n;
     
-    var mask = 0xFF;     
-    var l = 8 - n;
+    var val = 0, read = 0, p = 0, mask = 0xFF;
     
-    var val = this.cache << l;
-    val &= mask;
-    val >>= l;
+    while (read < n && p < 100){
+        var remaining = 8 - this.bitPosition;
+        
+        var l = m < remaining ? m : remaining;
+        
+        //console.log({ remaining: remaining, l : l, n : m});
+        
+        var chunk = l > 8 ? remaining : l;
+        l = 8 - chunk;
+        
+        var i = this.cache;
+        i >>= this.bitPosition;
+        i <<= l;
+        i &= mask;
+        i >>= l;
+        
+        
+        //console.log(val, read);
+        //val = (val << chunk) | i;
+        val = (i << read) | val;
+        //console.log(val);
+        
+        this.bitPosition += chunk;        
+        read += chunk;
+        m -= chunk;
+        
+        
+        //console.log("i:", i.toString(2), "chunk:", chunk, "val:", val, 'bitPosition:', this.bitPosition);
+        
+        if (this.bitPosition == 8){
+            this.cache = this.readByte();            
+        }
+        
+        //console.log(p);
+        
+        p++;       
+    }
     
-     
+        
+    // if (this.bitPosition + n > 8){
+    //     // Cross byte boundary
+    // }
     
+    // var output = 0;
+                      
+         
+    // var l = 8 - n;
     
+    // var val = this.cache;
+    // val >>= this.bitPosition;
+    // val <<= l;
+    // val &= mask;
+    // val >>= l;
+    
+    // this.bitPosition += n;
+    
+    // console.log('Cache:', this.cache.toString(2), l, 'position:', this.position);
+    
+    //var val = this.cache << l;
+    //val &= mask;
+    //val >>= l;
+                 
     // while (l--){
     //     mask <<= 1;
     //     mask |= 1;
@@ -155,13 +218,9 @@ ejs.zip.BitStream.prototype.read = function(n){
     // }
     
     // mask <<= n;
+
     
-    // var val = this.cache & ~mask;
-    
-    console.log(val);
-    
-    //this.bitPosition = 0;
-    //this.cache = this.readByte();
+    return val;
     
 }
 
@@ -188,14 +247,17 @@ ejs.zip.BitStream.prototype.readByte = function(n){
     
     var view = new Uint8Array(this.buffer, this.position, n);
     this.position += n;
+    this.bitPosition = 0;
     return n < 2 ? view[0] : view;    
 }
 
 ejs.zip.BitStream.prototype.seek = function(position){
     if (position > this.buffer.byteLength){
         throw 'Position is larger than the length of the buffer';
-    }else{
-        this.position = position;    
+    }else{        
+        this.bitPosition = 0;
+        this.cache = null;
+        this._position = position;    
     }    
 }
 
@@ -236,5 +298,12 @@ ejs.zip.BitStream.prototype.asHexString = function(){
 ejs.zip.BitStream.prototype.writeString = function(content){
     for (var i = 0; i < content.length;i++){
         this.writeByte(content[i].charCodeAt(0));
+    }
+}
+
+ejs.zip.BitStream.prototype.writeHexString = function(content){
+    for (var i =0; i < content.length; i+=2){
+        var number = parseInt('0x' + content[i] + '' + content[i + 1]);
+        this.writeByte(number);
     }
 }
