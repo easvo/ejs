@@ -2,6 +2,8 @@ ejs.zip.Deflate = function(){
     
 }
 
+ejs.zip.Deflate.prototype.MAX_BITS = 15;
+
 ejs.zip.Deflate.prototype.lengths = [{ bits : 0, lengthBase : 3, code : 257 },
 { bits : 0, lengthBase : 4, code : 258 },
 { bits : 0, lengthBase : 5, code : 259 },
@@ -87,6 +89,8 @@ ejs.zip.Deflate.prototype.inflate = function(stream){
         
         var lengths = [];
         
+        var literals = [];
+        
         // Code lengths code lengths
         for (var i = 0; i < hclen; i++){
             lengths[this.order[i]] = stream.read(3);
@@ -104,62 +108,75 @@ ejs.zip.Deflate.prototype.inflate = function(stream){
             }
         }
         
+        ranges.sort(function(a, b){
+            var d = a.length - b.length;
+            if (d === 0) return a.code - b.code;
+            else return d;
+        });        
+        
         var huff = new ejs.zip.Huffman();
         var codes = huff.canonicalize(ranges);
         
-        this.construct(lengths, 19);
+        var key = {};
+        for (var i = 0; i < ranges.length; i++){
+            key[ranges[i].next] = ranges[i].code;            
+        }
+                
+        // With codes read stream
+        var val = null;
         
-        console.log(ranges, lengths, codes);        
+        
+        var t = stream.read(2);
+        console.log('read', t);
+        
+        var i = 0; 
+        
+        while (i < hlit + hdist){
+            
+            var sym = this.decode(stream, key);
+            
+            if (sym < 0){
+                // Error                
+            }
+            
+            if (sym < 16){
+                literals[i++] = sym;
+                continue;                
+            }
+            
+            len = 0;
+            
+            if (sym === 16){
+                len = literals[i - 1];
+                sym = 3 + stream.read(2);
+            } else if(sym === 17){
+                sym = 3 + stream.read(3);
+            } else{
+                sym = 11 + stream.read(7);
+            }
+            
+            while(sym--){
+                literals[i++] = len;
+            }            
+        }
+        
+        console.log(literals);
+        
+        //this.construct(lengths, 19);
+        
+        console.log(lengths, codes, key);        
     } 
 }
 
-
-ejs.zip.Deflate.prototype.construct = function(length, n){
-    MAXBITS = 15;
-    var symbol;         /* current symbol when stepping through length[] */
-    var len;            /* current length when stepping through h->count[] */
-    var left;           /* number of possible codes left of current length */
-    var offs=[];      /* offsets in symbol table for each length */
+ejs.zip.Deflate.prototype.decode = function(stream, huffman){
+    var code = 0, index = 0;
     
-    var h = {
-        count : [],
-        symbol : []
-    };
-
-    /* count number of codes of each length */
-    for (len = 0; len <= MAXBITS; len++)
-        h.count[len] = 0;
-    for (symbol = 0; symbol < n; symbol++)
-        (h.count[length[symbol]])++;   /* assumes lengths are within bounds */
-    if (h.count[0] == n)               /* no codes! */
-        return 0;                       /* complete, but decode() will fail */
-
-    /* check for an over-subscribed or incomplete set of lengths */
-    left = 1;                           /* one possible code of zero length */
-    for (len = 1; len <= MAXBITS; len++) {
-        left <<= 1;                     /* one more bit, double codes left */
-        left -= h.count[len];          /* deduct count from possible codes */
-        if (left < 0)
-            return left;                /* over-subscribed--return negative */
-    }                                   /* left > 0 means incomplete */
-
-    /* generate offsets into symbol table for each length for sorting */
-    offs[1] = 0;
-    for (len = 1; len < MAXBITS; len++)
-        offs[len + 1] = offs[len] + h.count[len];
-
-    /*
-     * put symbols in table sorted by length, by symbol order within each
-     * length
-     */
-    for (symbol = 0; symbol < n; symbol++)
-        if (length[symbol] != 0)
-            h.symbol[offs[length[symbol]]++] = symbol;
-            
-    console.log(h);
-
-    /* return zero for complete set, positive for incomplete set */
-    return left;
+    for (var i = 0; i < this.MAX_BITS; i++){
+        code |= stream.read(1);
+        if (huffman[code]) return huffman[code];
+        
+        code <<= 1;
+    }
 }
 
 ejs.zip.Huffman = function(){
@@ -248,7 +265,7 @@ ejs.zip.Huffman.prototype.encode = function(source){
 }
 
 ejs.zip.Huffman.prototype.canonicalize = function(codes){
-    console.log(codes);
+
     var N = [0];
     var max = 0;
     
