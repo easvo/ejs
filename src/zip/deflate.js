@@ -72,7 +72,7 @@ ejs.zip.Deflate.prototype.distances = [{ bits : 0, distanceBase : 1, code : 0 },
 // 18 copy prev 11 - 138
 ejs.zip.Deflate.prototype.order = [16,17,18,0,8,7,9,6,10,5,11,4,12,3,13,2,14,1,15];
 
-ejs.zip.Deflate.prototype.inflate = function(stream){
+ejs.zip.Deflate.prototype.inflate = function(stream){ 
     var blockPosition = stream.read(1);
     
     var method = stream.read(2);
@@ -119,22 +119,18 @@ ejs.zip.Deflate.prototype.inflate = function(stream){
         
         var key = {};
         for (var i = 0; i < ranges.length; i++){
-            key[ranges[i].next] = ranges[i].code;            
+            key[ranges[i].next] = { length : ranges[i].length, value : ranges[i].code };            
         }
                 
         // With codes read stream
         var val = null;
-        
-        
-        var t = stream.read(2);
-        console.log('read', t);
-        
+                       
         var i = 0; 
         
         while (i < hlit + hdist){
             
             var sym = this.decode(stream, key);
-            
+                        
             if (sym < 0){
                 // Error                
             }
@@ -160,11 +156,46 @@ ejs.zip.Deflate.prototype.inflate = function(stream){
             }            
         }
         
-        console.log(literals);
+        var usedLiterals = [];
+        var distances = [];
+        
+        for (var i = 0; i < literals.length; i++){
+            if (literals[i] !== 0) {
+                if (i < 287){
+                    usedLiterals.push({ code : i, length : literals[i]});
+                }else{
+                    distances.push({ code : i - 286, length : literals[i]});
+                }
+                
+            }
+        }
+        
+        console.log('Used literals:', usedLiterals, distances);
+        
+        usedLiterals.sort(function(a, b){
+            var d = a.length - b.length;
+            if (d === 0) return a.code - b.code;
+            else return d;
+        }); 
+        
+        var codes = huff.canonicalize(usedLiterals);
+        
+        var key = {};
+        for (var i = 0; i < codes.length; i++){
+            key[codes[i].next] = { 
+                length : codes[i].length, 
+                value : codes[i].code,
+                literal : String.fromCharCode(codes[i].code)
+             };            
+        }
+        
+        console.log(key);
+        
+        
         
         //this.construct(lengths, 19);
         
-        console.log(lengths, codes, key);        
+        //console.log(lengths, codes, key);        
     } 
 }
 
@@ -173,10 +204,13 @@ ejs.zip.Deflate.prototype.decode = function(stream, huffman){
     
     for (var i = 0; i < this.MAX_BITS; i++){
         code |= stream.read(1);
-        if (huffman[code]) return huffman[code];
+        
+        if (huffman[code] && huffman[code].length === (i + 1)) return huffman[code].value;
         
         code <<= 1;
     }
+    
+    console.log(code, 'not found');
 }
 
 ejs.zip.Huffman = function(){
