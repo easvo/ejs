@@ -73,6 +73,8 @@ ejs.zip.Deflate.prototype.distances = [{ bits : 0, distanceBase : 1, code : 0 },
 ejs.zip.Deflate.prototype.order = [16,17,18,0,8,7,9,6,10,5,11,4,12,3,13,2,14,1,15];
 
 ejs.zip.Deflate.prototype.inflate = function(stream){ 
+    var outputStream = new ejs.zip.BitStream();
+    
     var blockPosition = stream.read(1);
     
     var method = stream.read(2);
@@ -117,10 +119,11 @@ ejs.zip.Deflate.prototype.inflate = function(stream){
         var huff = new ejs.zip.Huffman();
         var codes = huff.canonicalize(ranges);
         
-        var key = {};
-        for (var i = 0; i < ranges.length; i++){
-            key[ranges[i].next] = { length : ranges[i].length, value : ranges[i].code };            
-        }
+        var lengthKey = huff.toKey(codes);
+        // for (var i = 0; i < ranges.length; i++){
+        //     lengthKey[ranges[i].next] = lengthKey[ranges[i].length] || {};
+        //     lengthKey[ranges[i].next] = { length : ranges[i].length, value : ranges[i].code };            
+        // }
                 
         // With codes read stream
         var val = null;
@@ -129,10 +132,11 @@ ejs.zip.Deflate.prototype.inflate = function(stream){
         
         while (i < hlit + hdist){
             
-            var sym = this.decode(stream, key);
+            var sym = this.decode(stream, lengthKey);
                         
             if (sym < 0){
-                // Error                
+                // Error   
+                console.log("sym error < 0");             
             }
             
             if (sym < 16){
@@ -153,9 +157,9 @@ ejs.zip.Deflate.prototype.inflate = function(stream){
             
             while(sym--){
                 literals[i++] = len;
-            }            
+            }          
         }
-        
+                
         var usedLiterals = [];
         var distances = [];
         
@@ -166,36 +170,59 @@ ejs.zip.Deflate.prototype.inflate = function(stream){
                 }else{
                     distances.push({ code : i - 286, length : literals[i]});
                 }
-                
+               
             }
-        }
-        
-        console.log('Used literals:', usedLiterals, distances);
+        }                
         
         usedLiterals.sort(function(a, b){
             var d = a.length - b.length;
             if (d === 0) return a.code - b.code;
             else return d;
-        }); 
+        });
+        
+        console.log('Used literals:', usedLiterals, distances);
         
         var codes = huff.canonicalize(usedLiterals);
         
-        var key = {};
-        for (var i = 0; i < codes.length; i++){
-            key[codes[i].next] = { 
-                length : codes[i].length, 
-                value : codes[i].code,
-                literal : String.fromCharCode(codes[i].code)
-             };            
-        }
+        var literalKey = huff.toKey(codes);
+        // for (var i = 0; i < codes.length; i++){
+        //     literalKey[codes[i].next] = { 
+        //         length : codes[i].length, 
+        //         value : codes[i].code,
+        //         literal : String.fromCharCode(codes[i].code),
+        //         bin : codes[i].bs
+        //      };            
+        // }
         
-        console.log(key);
+        distances.sort(function(a, b){
+            var d = a.length - b.length;
+            if (d === 0) return a.code - b.code;
+            else return d;
+        });
         
+        var codes = huff.canonicalize(distances);
         
+        var distanceKey = huff.toKey(codes);
+        // for (var i = 0; i < codes.length; i++){
+        //     distanceKey[codes[i].next] = {
+        //         length : codes[i].length,
+        //         value : codes[i].code,
+        //         bin : codes[i].bs
+        //     };
+        // }
         
-        //this.construct(lengths, 19);
+        var output = '';
+                
+        // for (var i = 0; i < 50; i++){
+        //     output += stream.read(1);
+        // }
         
-        //console.log(lengths, codes, key);        
+        console.log(literalKey, distanceKey, output);
+        
+        var sym = this.decode(stream, literalKey);
+        
+        console.log(sym, 'first after');
+               
     } 
 }
 
@@ -205,7 +232,14 @@ ejs.zip.Deflate.prototype.decode = function(stream, huffman){
     for (var i = 0; i < this.MAX_BITS; i++){
         code |= stream.read(1);
         
-        if (huffman[code] && huffman[code].length === (i + 1)) return huffman[code].value;
+       // console.log(code.toString(2), i, code);
+        
+        if (huffman[code] && huffman[code][i +1]) {
+            var val = huffman[code][i + 1].code;
+            if (val !== 286) {
+                return val;
+            } 
+        }
         
         code <<= 1;
     }
@@ -302,7 +336,7 @@ ejs.zip.Huffman.prototype.canonicalize = function(codes){
 
     var N = [0];
     var max = 0;
-    
+      
     for(var i = 0; i < codes.length; i++){        
         N[codes[i].length] = N[codes[i].length] || 0;
         N[codes[i].length]++;
@@ -329,12 +363,21 @@ ejs.zip.Huffman.prototype.canonicalize = function(codes){
             nextCode[len]++;
         }
     }
-    
-    // codes = codes.sort(function(a, b){
-    //     return a.code.localeCompare(b.code);
-    // });
-    
+        
     return codes;          
+}
+
+ejs.zip.Huffman.prototype.toKey = function(codes){
+    var key = {};
+    console.log(codes);
+    
+    for (var i = 0; i < codes.length; i++){
+        var code = codes[i];
+        key[code.next] = key[code.next] === undefined ? {} : key[code.next];
+        key[code.next][code.length] = code;
+    }
+    
+    return key;
 }
 
 ejs.zip.HuffmanNode = function(){
