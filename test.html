@@ -30,9 +30,7 @@
             var view = new Uint8Array(data);
             view[0] = 255;
             view[1] = 150;
-            view[2] = 255;
-            
-            //ejs.helper.saveText('Never.txt', 'This is what happens');
+            view[2] = 255;           
             
             window.onload = function(){
                 var huff = new ejs.zip.Huffman();
@@ -40,12 +38,13 @@
                 var op = d3.select('#output');
                 var codeElements = op.selectAll('div.codes').data(huff.codes);
                 codeElements.enter().append('div').attr('class', 'codes');
-                
-                //console.log(huff);
+                             
                 codeElements.text(function(d){
-                    return d.code + ' - ' + d.bs + ' - ' + d.next;
-                });
+                    return d.code + ' - ' + d.bs + ' - ' + d.value;
+                });                
             }
+            
+            
             
             var buffer = new ejs.zip.BitStream();
                                     
@@ -66,17 +65,12 @@
             
             //buffer.read(8);
             
-            var num = 5;
-            
-            //console.log((num).toString(2), buffer.reverse(num).toString(2));                                                            
+            var num = 5;                                                                 
             
             
             var file = new ejs.zip.ZipFile();
             
             buffer.writeString('Wikipedia');
-            console.log(buffer);
-            
-            //console.log(file.crc32(buffer.buffer));
             
             file.addFile('example.txt', 'This is some example text');
             file.addFile('moo/display.txt', 'Part two of the data');
@@ -87,25 +81,23 @@
             var crc = file.crc32(test);
             var adler = file.adler32(test);
             
-            var blahHex = 'edc4210100300800b02a4f408a170185a0bf26056e13fb93fd4a92244992244992244992a4ab6201';
+            var blahHex = 'edc4210100300800b02a4f408a170185a0bf26056e13fb93fd4a92244992244992244992a4ab6201';            
+            var nightHex = '4d90416e85300c44f7957a8739c057afc0a2ddb0f9edae6b03865884f82b0e1f71fbc6a152bb0a0ee37933f99c510223c912ca0d52208683637c7b7df90ed4c6457582fed375b8fb81214b5aaa5c4af04dff3fea93fd1613e535b159f5e931528231a328b61346456ca6b1882648faf375ed8cbef273d5525cdd48533c4183ee17c01ab9a63975cfe093ede69f38748f13ac488cd7ca12657b1883600f1e575f39bc50ef33adad5f35ae245f3745a06ca1c387b68b4dcc1af0fef56ea034f9201934cfdc9277e84b2bd66803233399267661c5b44c62c13bb7ead5ead05c33729a2e38d7a7facdedea65e786a4d2fd00';
             
             var blahBs = new ejs.zip.BitStream();
             blahBs.writeHexString(blahHex);
-            console.log(new Uint8Array(blahBs.buffer));
             
             blahBs.position = 0;
             
             var deflater = new ejs.zip.Deflate();
-            deflater.inflate(blahBs);
-                                 
-             
-            
-            //file.save();
-            //file.save();
-            
+            deflater.inflate(blahBs);           
 
-        
+            //file.save();
+            //file.save();
+                                
         </script>
+        <style>
+        </style>
     </head>
     <body>
         <div id="output"></div>

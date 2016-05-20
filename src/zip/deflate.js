@@ -3,8 +3,10 @@ ejs.zip.Deflate = function(){
 }
 
 ejs.zip.Deflate.prototype.MAX_BITS = 15;
+ejs.zip.Deflate.prototype.MAX_LITERAL_CODES = 286;
 
-ejs.zip.Deflate.prototype.lengths = [{ bits : 0, lengthBase : 3, code : 257 },
+ejs.zip.Deflate.prototype.lengths = [
+{ bits : 0, lengthBase : 3, code : 257 },
 { bits : 0, lengthBase : 4, code : 258 },
 { bits : 0, lengthBase : 5, code : 259 },
 { bits : 0, lengthBase : 6, code : 260 },
@@ -70,15 +72,16 @@ ejs.zip.Deflate.prototype.distances = [{ bits : 0, distanceBase : 1, code : 0 },
 // 16 copy prev 3 - 6, 2 bits
 // 17 copy prev 3 - 10
 // 18 copy prev 11 - 138
-ejs.zip.Deflate.prototype.order = [16,17,18,0,8,7,9,6,10,5,11,4,12,3,13,2,14,1,15];
+ejs.zip.Deflate.prototype.order = [16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15];
+
 
 ejs.zip.Deflate.prototype.inflate = function(stream){ 
     var outputStream = new ejs.zip.BitStream();
-    
+      
     var blockPosition = stream.read(1);
     
     var method = stream.read(2);
-       
+          
     if (method === 1){ // Fixed
         
     }
@@ -87,7 +90,7 @@ ejs.zip.Deflate.prototype.inflate = function(stream){
         var hdist = stream.read(5) + 1;
         var hclen = stream.read(4) + 4;
         
-        console.log(hlit, hdist, hclen);
+        //console.log('header', hlit, hdist, hclen);
         
         var lengths = [];
         
@@ -95,12 +98,12 @@ ejs.zip.Deflate.prototype.inflate = function(stream){
         
         // Code lengths code lengths
         for (var i = 0; i < hclen; i++){
-            lengths[this.order[i]] = stream.read(3);
+            lengths[this.order[i]] = stream.read(3);            
         }
         
         for (;i<19;i++){
             lengths[this.order[i]] = 0;
-        }
+        }       
         
         var ranges = [];
         
@@ -117,25 +120,20 @@ ejs.zip.Deflate.prototype.inflate = function(stream){
         });        
         
         var huff = new ejs.zip.Huffman();
-        var codes = huff.canonicalize(ranges);
+        var codes = huff.canonicalize(ranges);        
         
         var lengthKey = huff.toKey(codes);
-        // for (var i = 0; i < ranges.length; i++){
-        //     lengthKey[ranges[i].next] = lengthKey[ranges[i].length] || {};
-        //     lengthKey[ranges[i].next] = { length : ranges[i].length, value : ranges[i].code };            
-        // }
                 
         // With codes read stream
         var val = null;
                        
-        var i = 0; 
-        
+        var i = 0;
+                
         while (i < hlit + hdist){
             
             var sym = this.decode(stream, lengthKey);
-                        
+                                    
             if (sym < 0){
-                // Error   
                 console.log("sym error < 0");             
             }
             
@@ -153,24 +151,24 @@ ejs.zip.Deflate.prototype.inflate = function(stream){
                 sym = 3 + stream.read(3);
             } else{
                 sym = 11 + stream.read(7);
-            }
+            }           
             
             while(sym--){
                 literals[i++] = len;
             }          
-        }
+        }                
                 
         var usedLiterals = [];
         var distances = [];
+       
         
-        for (var i = 0; i < literals.length; i++){
+        for (var i = 0; i < literals.length && i < literals.length; i++){
             if (literals[i] !== 0) {
-                if (i < 287){
+                if (i < hlit){                    
                     usedLiterals.push({ code : i, length : literals[i]});
-                }else{
-                    distances.push({ code : i - 286, length : literals[i]});
-                }
-               
+                }else {
+                    distances.push({ code : i - hlit, length : literals[i]});
+                }               
             }
         }                
         
@@ -180,19 +178,9 @@ ejs.zip.Deflate.prototype.inflate = function(stream){
             else return d;
         });
         
-        console.log('Used literals:', usedLiterals, distances);
-        
         var codes = huff.canonicalize(usedLiterals);
         
         var literalKey = huff.toKey(codes);
-        // for (var i = 0; i < codes.length; i++){
-        //     literalKey[codes[i].next] = { 
-        //         length : codes[i].length, 
-        //         value : codes[i].code,
-        //         literal : String.fromCharCode(codes[i].code),
-        //         bin : codes[i].bs
-        //      };            
-        // }
         
         distances.sort(function(a, b){
             var d = a.length - b.length;
@@ -203,45 +191,74 @@ ejs.zip.Deflate.prototype.inflate = function(stream){
         var codes = huff.canonicalize(distances);
         
         var distanceKey = huff.toKey(codes);
-        // for (var i = 0; i < codes.length; i++){
-        //     distanceKey[codes[i].next] = {
-        //         length : codes[i].length,
-        //         value : codes[i].code,
-        //         bin : codes[i].bs
-        //     };
-        // }
+              
+        var sym = 0;
+        var count = 0;
         
-        var output = '';
+        while (sym !== 256 && count < 1000){ // To avoid infinite
+            sym = this.decode(stream, literalKey);
+            var length = 0;
+            var distance = 0;
+            
+            if (sym < 256){ // literal
                 
-        // for (var i = 0; i < 50; i++){
-        //     output += stream.read(1);
-        // }
-        
-        console.log(literalKey, distanceKey, output);
-        
-        var sym = this.decode(stream, literalKey);
-        
-        console.log(sym, 'first after');
-               
-    } 
+                outputStream.writeByte(sym);
+                
+            }else if (sym > 256){ // length
+                var l = this.lengths[sym - 257];
+                length = l.lengthBase + stream.read(l.bits);
+                
+                sym = this.decode(stream, distanceKey);
+                
+                var d = this.distances[sym];
+
+                distance = d.distanceBase + stream.read(d.bits);                                                              
+            }
+            
+            while (length--){
+                outputStream.writeByte(outputStream.getByteAtPosition(outputStream.position - distance));
+            }            
+            count++;
+        }                     
+    }
+    
+    return outputStream; 
 }
 
 ejs.zip.Deflate.prototype.decode = function(stream, huffman){
     var code = 0, index = 0;
     
     for (var i = 0; i < this.MAX_BITS; i++){
-        code |= stream.read(1);
+        code |= stream.read(1);       
         
-       // console.log(code.toString(2), i, code);
-        
-        if (huffman[code] && huffman[code][i +1]) {
-            var val = huffman[code][i + 1].code;
-            if (val !== 286) {
-                return val;
-            } 
+        if (huffman[code] && huffman[code][i + 1]) {
+            return huffman[code][i + 1].code;
         }
         
         code <<= 1;
+    }
+    
+    console.log(code, 'not found');
+}
+
+ejs.zip.Deflate.prototype.decodeFlipped = function(stream, huffman){
+    var code = 0, index = 0;
+    
+    for (var i = 0; i < this.MAX_BITS; i++){
+        //code |= stream.read(1);  
+        
+        var val = stream.read(1);
+        val <<= i;
+        val |= code;
+        
+        code = val;     
+        
+        if (huffman[code] && huffman[code][i + 1]) {
+            var val = huffman[code][i + 1].code;
+            return val;
+        }
+        
+        //code <<= 1;
     }
     
     console.log(code, 'not found');
@@ -326,37 +343,32 @@ ejs.zip.Huffman.prototype.encode = function(source){
     });
         
     this.codes = this.canonicalize(codes);
-    
-    
-    //console.log(freq, codes);
-    
+   
 }
 
 ejs.zip.Huffman.prototype.canonicalize = function(codes){
-
     var N = [0];
     var max = 0;
-      
+    var code = 0, nextCode = [];        
+         
     for(var i = 0; i < codes.length; i++){        
         N[codes[i].length] = N[codes[i].length] || 0;
         N[codes[i].length]++;
         max = Math.max(max, codes[i].length);
-    }
-    
-    code = 0;
-    nextCode = [];
-    
+    }   
+        
     for (bits = 1; bits <= max; bits++){
-        code = (code + N[bits - 1]) << 1;
-        nextCode[bits] = code;
+        var n = N[bits - 1];
+        n = n === undefined ? 0 : n;
+        code = (code + n) << 1;
+        nextCode[bits] = code;       
     }
-    
-    
+        
     for(var i = 0; i < codes.length; i++){
         var len = codes[i].length;
         if (len != 0){
-            codes[i].next = nextCode[len];
-            codes[i].bs = codes[i].next.toString(2);
+            codes[i].value = nextCode[len];
+            codes[i].bs = codes[i].value.toString(2);
             while(codes[i].bs.length < codes[i].length){
                 codes[i].bs = '0' + codes[i].bs;
             }
@@ -369,12 +381,11 @@ ejs.zip.Huffman.prototype.canonicalize = function(codes){
 
 ejs.zip.Huffman.prototype.toKey = function(codes){
     var key = {};
-    console.log(codes);
     
     for (var i = 0; i < codes.length; i++){
         var code = codes[i];
-        key[code.next] = key[code.next] === undefined ? {} : key[code.next];
-        key[code.next][code.length] = code;
+        key[code.value] = key[code.value] === undefined ? {} : key[code.value];
+        key[code.value][code.length] = code;
     }
     
     return key;
@@ -429,7 +440,6 @@ ejs.zip.LZ77.prototype.compress = function(input){
             found = dictionary.indexOf(testSequence);
         }
                                         
-        //console.log(pre, nextSequence, testSequence[testSequence.length - 1], i, dictionary);
         var offset = i  - pre;
         var length = nextSequence.length;
         var nextCharacter = input[cursor] || '$';
@@ -437,9 +447,7 @@ ejs.zip.LZ77.prototype.compress = function(input){
         if (pre === -1) result = input[cursor];
         else  result = '<' + offset + ',' + length + ',' + nextCharacter + '>';                        
         i = cursor;
-        output += result;
-        //console.log(result);
-        
+        output += result;      
     }
     
     return output;

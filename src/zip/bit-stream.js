@@ -124,6 +124,10 @@ ejs.zip.BitStream.prototype.getBitLength = function(val){
     return count;
 }
 
+ejs.zip.BitStream.prototype.getByteAtPosition = function(position){
+    var view = new Uint8Array(this.buffer, position, 1);
+    return view[0];
+}
 
 ejs.zip.BitStream.prototype.resize = function(size){
     size = size === undefined ? 0 : size;
@@ -152,9 +156,7 @@ ejs.zip.BitStream.prototype.read = function(n){
         var remaining = 8 - this.bitPosition;
         
         var l = m < remaining ? m : remaining;
-        
-        //console.log({ remaining: remaining, l : l, n : m});
-        
+                
         var chunk = l > 8 ? remaining : l;
         l = 8 - chunk;
         
@@ -164,64 +166,20 @@ ejs.zip.BitStream.prototype.read = function(n){
         i &= mask;
         i >>= l;
         
-        
-        //console.log(val, read);
-        //val = (val << chunk) | i;
         val = (i << read) | val;
-        //console.log(val);
         
         this.bitPosition += chunk;        
         read += chunk;
         m -= chunk;
-        
-        
-        //console.log("i:", i.toString(2), "chunk:", chunk, "val:", val, 'bitPosition:', this.bitPosition);
+
         
         if (this.bitPosition == 8){
             this.cache = this.readByte();            
         }
         
-        //console.log(p);
-        
         p++;       
-    }
-    
-        
-    // if (this.bitPosition + n > 8){
-    //     // Cross byte boundary
-    // }
-    
-    // var output = 0;
-                      
-         
-    // var l = 8 - n;
-    
-    // var val = this.cache;
-    // val >>= this.bitPosition;
-    // val <<= l;
-    // val &= mask;
-    // val >>= l;
-    
-    // this.bitPosition += n;
-    
-    // console.log('Cache:', this.cache.toString(2), l, 'position:', this.position);
-    
-    //var val = this.cache << l;
-    //val &= mask;
-    //val >>= l;
-                 
-    // while (l--){
-    //     mask <<= 1;
-    //     mask |= 1;
-        
-    //     this.bitPosition++;
-    // }
-    
-    // mask <<= n;
-
-    
-    return val;
-    
+    }                    
+    return val;    
 }
 
 ejs.zip.BitStream.prototype.reverse = function(x){
@@ -306,4 +264,14 @@ ejs.zip.BitStream.prototype.writeHexString = function(content){
         var number = parseInt('0x' + content[i] + '' + content[i + 1]);
         this.writeByte(number);
     }
+}
+
+ejs.zip.BitStream.prototype.asString = function(){
+    var output = new Uint8Array(this.buffer);
+    var strOutput = '';
+    for (var i = 0; i < output.length; i++){
+        var raw = String.fromCharCode(output[i]);
+        strOutput += raw;
+    }
+    return strOutput;
 }
