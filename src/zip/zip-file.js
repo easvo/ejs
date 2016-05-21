@@ -4,9 +4,34 @@ ejs.zip.HEADER_SIGNATURE = 0x05054b50;
 ejs.zip.EOCD_SIGNATURE = 0x06054b50;
 ejs.zip.CRC32_MAGIC_NUMBER = 0xEDB88320; 
 
-ejs.zip.ZipFile = function () {
+ejs.zip.ZipFile = function (stream) {
     this.contents = [];
-    this.ncLimit = 65535;    
+    this.ncLimit = 65535;  
+    
+    // Parse stream
+    if (stream){
+        this.parseZipStream(stream);
+    }  
+}
+
+ejs.zip.ZipFile.prototype.parseZipStream = function(stream){
+    var header = stream.readByte(4);
+    var version = stream.readByte(2);
+    var flag = stream.readByte(2);
+    var compression = stream.readByte(2);
+    var time = stream.readByte(2);
+    var date = stream.readByte(2);
+    
+    var crc = stream.readByte(4);
+    
+    var compSize = stream.readByte(4);
+    var unCompSize = stream.readByte(4);
+    var filenameLength = stream.readByte(2);
+    var extra = stream.readByte(2);
+    
+    console.log(filenameLength);
+    
+
 }
 
 ejs.zip.ZipFile.prototype.addFile = function(path, content){

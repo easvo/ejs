@@ -195,7 +195,7 @@ ejs.zip.BitStream.prototype.reverse = function(x){
     return r;
 }
 
-ejs.zip.BitStream.prototype.readByte = function(n){    
+ejs.zip.BitStream.prototype.readByte = function(n, msb){    
     n = n === undefined ? 1 : n;
     var len = this.buffer.byteLength;
     
@@ -206,6 +206,16 @@ ejs.zip.BitStream.prototype.readByte = function(n){
     var view = new Uint8Array(this.buffer, this.position, n);
     this.position += n;
     this.bitPosition = 0;
+    
+    var val = 0;
+    
+    while (n--){
+        val <<= 8;
+        val |= view[n];
+    }   
+    
+    return val;
+    
     return n < 2 ? view[0] : view;    
 }
 
