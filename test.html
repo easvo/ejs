@@ -35,13 +35,13 @@
             window.onload = function(){
                 var huff = new ejs.zip.Huffman();
                 huff.encode(test);
-                var op = d3.select('#output');
-                var codeElements = op.selectAll('div.codes').data(huff.codes);
-                codeElements.enter().append('div').attr('class', 'codes');
+                //var op = d3.select('#output');
+                //var codeElements = op.selectAll('div.codes').data(huff.codes);
+                //codeElements.enter().append('div').attr('class', 'codes');
                              
-                codeElements.text(function(d){
-                    return d.code + ' - ' + d.bs + ' - ' + d.value;
-                });                
+                //codeElements.text(function(d){
+                 //   return d.code + ' - ' + d.bs + ' - ' + d.value;
+                //});                
             }
             
             
@@ -99,7 +99,7 @@
             bBs.position = 0;
             
             var bZip = new ejs.zip.ZipFile(bBs);
-            
+            bZip.contents[0].uncompress();
             
 
             //file.save();

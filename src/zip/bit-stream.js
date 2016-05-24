@@ -1,10 +1,16 @@
-ejs.zip.BitStream = function(){
-    this.buffer = new ArrayBuffer(0);
-    this.position = 0;
+ejs.zip.BitStream = function(ui8Array){
+    if (ui8Array !== undefined){
+        this.buffer = new ArrayBuffer(ui8Array.length);
+        new Uint8Array(this.buffer).set(ui8Array);
+    }else{
+        this.buffer = new ArrayBuffer(0);
+    }
+    
+    this.position = this.buffer.byteLength;
     this.bitPosition = 0;
     this.pending = 0;
     this.pendingLength = 0;
-    this.size = 1024;
+    this.size = Math.max(this.buffer.byteLength, 1024);
 }
 
 Object.defineProperty(ejs.zip.BitStream.prototype, 'position', {
@@ -195,7 +201,7 @@ ejs.zip.BitStream.prototype.reverse = function(x){
     return r;
 }
 
-ejs.zip.BitStream.prototype.readByte = function(n, msb){    
+ejs.zip.BitStream.prototype.readByte = function(n, msb, asArray){    
     n = n === undefined ? 1 : n;
     var len = this.buffer.byteLength;
     
@@ -206,6 +212,8 @@ ejs.zip.BitStream.prototype.readByte = function(n, msb){
     var view = new Uint8Array(this.buffer, this.position, n);
     this.position += n;
     this.bitPosition = 0;
+    
+    if (asArray === true && msb === true) return view;
     
     var val = 0;
     

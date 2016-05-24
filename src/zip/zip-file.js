@@ -15,23 +15,96 @@ ejs.zip.ZipFile = function (stream) {
 }
 
 ejs.zip.ZipFile.prototype.parseZipStream = function(stream){
-    var header = stream.readByte(4);
-    var version = stream.readByte(2);
-    var flag = stream.readByte(2);
-    var compression = stream.readByte(2);
-    var time = stream.readByte(2);
-    var date = stream.readByte(2);
+    var eof = false;
+    var n = 0;
+    while (!eof && n < 100){
+        n++;
+        var header = stream.readByte(4);
+        
+         if (header === ejs.zip.FILE_HEADER){
+        // Create a file contents
+        var entry = new ejs.zip.ZipEntry();
+        entry.version = stream.readByte(2);
+        entry.flag = stream.readByte(2);
+        entry.compression = stream.readByte(2);
+        entry.time = stream.readByte(2);
+        entry.date = stream.readByte(2);
+        
+        entry.modifiedDate = this.dosDateToDate(entry.date, entry.time);
     
-    var crc = stream.readByte(4);
+        entry.crc = stream.readByte(4);
     
-    var compSize = stream.readByte(4);
-    var unCompSize = stream.readByte(4);
-    var filenameLength = stream.readByte(2);
-    var extra = stream.readByte(2);
+        entry.compSize = stream.readByte(4);
+        entry.unCompSize = stream.readByte(4);
+        entry.filenameLength = stream.readByte(2);
+        entry.extra = stream.readByte(2);
+        
+        console.log(entry);
+        
+        var len = entry.filenameLength;       
+        
+        while(len--){
+            var val = stream.readByte(1);
+            entry.name += String.fromCharCode(val);
+        }
+        
+        len = entry.compSize;
+        
+        // Read content as uint8array
+        entry.contentBytes = stream.readByte(len, true, true);
+        
+        this.contents.push(entry);        
+    }
     
-    console.log(filenameLength);
+    if (header === ejs.zip.CENTRAL_DIRECTORY_HEADER){
+        console.log('found cd header');
+        var version = stream.readByte(2);
+        var versionToExtract = stream.readByte(2);
+        var bitFlag = stream.readByte(2);
+        var compression = stream.readByte(2);
+        var modTime = stream.readByte(2);
+        var modDate = stream.readByte(2);
+        
+        var crc = stream.readByte(4);
+        
+        var compressedSize = stream.readByte(4);
+        var uncompressedSize = stream.readByte(4);
+        var filenameLength = stream.readByte(2);
+        var extraFieldLength = stream.readByte(2);
+        
+        var fileCommentLength = stream.readByte(2);
+        var diskNumberStart = stream.readByte(2);
+        var internalFileAttrs = stream.readByte(2);
+        var externalFileAttrs = stream.readByte(4);
+        
+        var relativeOffset = stream.readByte(4);
+        
+        var len = filenameLength;
+        var fileName = '';
+        
+        while (len--){
+            fileName += String.fromCharCode(stream.readByte(1));
+        }
+        
+        console.log('filename', fileName);
+    }
     
-
+    if (header === ejs.zip.EOCD_SIGNATURE){
+        console.log('found header');
+        var numberOnDisk = stream.readByte(2);
+        var numberOfDisk = stream.readByte(2);
+        var numberEntries = stream.readByte(2);
+        var numEntries = stream.readByte(2);
+        
+        var cdSide = stream.readByte(4);
+        var offset = stream.readByte(4);
+        var commentLength = stream.readByte(2);
+        
+        eof = true;        
+    }        
+    }
+    
+    console.log(this, n);
 }
 
 ejs.zip.ZipFile.prototype.addFile = function(path, content){
@@ -75,6 +148,23 @@ ejs.zip.ZipFile.prototype.dateToDosDate = function(date){
     val |= day;
     
     return val;    
+}
+
+ejs.zip.ZipFile.prototype.dosDateToDate = function(date, time){
+    console.log('called'); console.log(date);
+    var year = (date >> 9) + 1980; 
+    var month = ((date >> 5) & 15) - 1;
+    var day = date & 31;
+    
+    var hour = time >> 11;
+    var minutes = time >> 5;
+    minutes &= 63;
+    var seconds = time & 31;
+    seconds *= 2;        
+        
+    var d = new Date(year, month, day, hour, minutes, seconds);
+        
+    return d;
 }
 
 ejs.zip.ZipFile.prototype.crc32 = function(content){
