@@ -15,6 +15,5 @@ ejs.zip.ZipEntry.prototype.uncompress = function(){
     d.position = 0;
     var def = new ejs.zip.Deflate();
     var outputStream = def.inflate(d);
-    console.log(d);
-    //console.log(outputStream.asString());
+    return outputStream;    
 }

@@ -225,6 +225,12 @@ ejs.zip.Deflate.prototype.inflate = function(stream){
     return outputStream; 
 }
 
+ejs.zip.Deflate.prototype.deflate = function(stream){
+    // Get LZ77 coding
+    
+
+}
+
 ejs.zip.Deflate.prototype.decode = function(stream, huffman){
     var code = 0, index = 0;
     

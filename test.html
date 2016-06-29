@@ -22,51 +22,32 @@
             test = 'Of the night, it is well. What is good of the night? Night brings with it the covering darkness that veils all and hinders our sight.';
             
             var lz = new ejs.zip.LZ77();
-            //var lzw = new ejs.zip.LZW();
-            //console.log('input', test);
-            //console.log('output', lz.compress(test));
-            
-            var data = new ArrayBuffer(8);
-            var view = new Uint8Array(data);
-            view[0] = 255;
-            view[1] = 150;
-            view[2] = 255;           
-            
+
+            var encodingSnippet = 'What is it? 𐍈€ヲ電';
+
+            var encodingSample = encodingSnippet;
+
+            for (var i = 0; i < 100; i++){
+                encodingSample += ' ' + encodingSnippet;
+            }
+
+                             
             window.onload = function(){
-                var huff = new ejs.zip.Huffman();
-                huff.encode(test);
+                //var huff = new ejs.zip.Huffman();
+                //huff.encode(test);
                 //var op = d3.select('#output');
                 //var codeElements = op.selectAll('div.codes').data(huff.codes);
                 //codeElements.enter().append('div').attr('class', 'codes');
                              
                 //codeElements.text(function(d){
                  //   return d.code + ' - ' + d.bs + ' - ' + d.value;
-                //});                
+                //});
+
+                //var number = 2345678;
+
             }
             
-            
-            
-            var buffer = new ejs.zip.BitStream();
-                                    
-            //buffer.writeByte(ejs.zip.FILE_HEADER, 4, true);
-            
-            //console.log(buffer);
-            //buffer.flush();
-            //buffer.writeByte(20);
-            //buffer.write(1);
-            //buffer.write(259);
-            
-            //buffer.flush();            
-           
-            //console.log(buffer.asBinaryString());
-            //console.log(buffer.asHexString());
-            
-            //buffer.seek(0);
-            
-            //buffer.read(8);
-            
-            var num = 5;                                                                 
-            
+            var buffer = new ejs.zip.BitStream();                                                                                                                   
             
             var file = new ejs.zip.ZipFile();
             
@@ -93,13 +74,19 @@
             deflater.inflate(blahBs);   
             
             var blahSource = '504b0304140000000800597aa4484b8faa93280000009b1e00000c0000005465727269626c652e747874edc4210100300800b02a4f408a170185a0bf26056e13fb93fd4a92244992244992244992a4ab6201504b01021400140000000800597aa4484b8faa93280000009b1e00000c00000000000000010020000000000000005465727269626c652e747874504b050600000000010001003a000000520000000000';
+
+
+            var encSource = '504b03041400000008002087db4869c1621b650000008548000007000000656e632e747874edc9211580301400c02abf0931a6e798660998c1f01e9e0aa859da80c211811ebc3b7b69cc35ca14a50ef16eeb72cdc7ddfab39f918c31c618638c31c618638c31c618638c31c618638c31c618638c31c618638c31c618638c31c618638c31c618f3e3890f504b010214001400000008002087db4869c1621b6500000085480000070000000000000000002000000000000000656e632e747874504b05060000000001000100350000008a0000000000';
             
             var bBs = new ejs.zip.BitStream();
-            bBs.writeHexString(blahSource);
+            bBs.writeHexString(encSource);
             bBs.position = 0;
+
             
             var bZip = new ejs.zip.ZipFile(bBs);
-            bZip.contents[0].uncompress();
+            //console.log(bZip);
+            //var s = bZip.contents[0].uncompress();
+            //console.log(s.asString());
             
 
             //file.save();

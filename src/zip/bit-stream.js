@@ -271,25 +271,108 @@ ejs.zip.BitStream.prototype.asHexString = function(){
     return strOutput;
 }
 
+/**
+ * Writes the string in UTF-8 encoding
+ */
 ejs.zip.BitStream.prototype.writeString = function(content){
+    var mask = 0x3f;
     for (var i = 0; i < content.length;i++){
-        this.writeByte(content[i].charCodeAt(0));
+        var a = content[i].codePointAt(0);        
+        if (a > 0x7f){ // Encode using multiple bytes            
+            
+            var b = 1;
+            var i = 0;
+            var buffer = [];
+
+            while (a > (1 << (5 - i))){
+                var v = (2 << 6) | (a & mask);
+                
+                buffer.push(v);
+                a >>= 6;
+                
+                i++;
+                b <<= 1;
+                b |= 1;                
+            }
+
+            b <<= (7 - i);
+            b |= a;
+
+            this.writeByte(b);
+
+            while (buffer.length){
+                this.writeByte(buffer.pop());
+            }
+
+        }else{
+            this.writeByte(a);
+        }        
     }
 }
 
 ejs.zip.BitStream.prototype.writeHexString = function(content){
-    for (var i =0; i < content.length; i+=2){
+    for (var i = 0; i < content.length; i += 2){
         var number = parseInt('0x' + content[i] + '' + content[i + 1]);
         this.writeByte(number);
     }
 }
 
+/**
+ * Outputs from UTF-8 encoded stream
+ */
 ejs.zip.BitStream.prototype.asString = function(){
     var output = new Uint8Array(this.buffer);
     var strOutput = '';
+    var buffer = null;
+
+    var c = [0, 2, 6, 14, 30];
     for (var i = 0; i < output.length; i++){
-        var raw = String.fromCharCode(output[i]);
-        strOutput += raw;
+        var a = output[i];
+        j = 0;
+
+        var byteLength = null;
+                
+        while (j < c.length && byteLength === null){
+            var t = a >> (7 - j);
+            if (t == c[j]) {
+                byteLength = j;
+            }                        
+            j++;
+        }
+
+        if (byteLength === 0){            
+            if (buffer !== null){
+                strOutput += String.fromCodePoint(buffer);
+                buffer = null;
+            }
+            strOutput += String.fromCodePoint(a);
+        }else if (byteLength === 1) { // Continuation
+
+            var mask = 63;
+            buffer <<= 6;
+            buffer |= a & mask;
+        }else {
+            if (buffer !== null){
+
+                strOutput += String.fromCodePoint(buffer);
+                buffer = null;
+            }
+            var bm = 0;
+            var l = 7 - byteLength;
+            while (l--){
+                bm <<= 1;
+                bm |= 1;
+            }
+
+            var v = a & bm;
+            buffer = v;                       
+        }
     }
+    
+    if (buffer !== null){
+        strOutput += String.fromCodePoint(buffer);
+        buffer = null;
+    }
+
     return strOutput;
 }
