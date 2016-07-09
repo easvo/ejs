@@ -1,7 +1,7 @@
 <html>
     <head>
         <script type="text/javascript" src="bin/ejs.js"></script>
-        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.16/d3.js"></script>
+        <!--<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.16/d3.js"></script>-->
         <script>
         //console.log("hello");
             var doc = new ejs.xml.XmlDocument();
@@ -23,13 +23,28 @@
             
             var lz = new ejs.zip.LZ77();
 
-            var encodingSnippet = 'What is it? 𐍈€ヲ電';
+            // 𐍈
+            var hwair = String.fromCodePoint(66376);
+
+            // €
+            var euro = String.fromCodePoint(8364);
+
+            // ヲ
+            var wo = String.fromCodePoint(12530);
+
+            // 電
+            var elect = String.fromCodePoint(38651);
+
+            var encodingSnippet = 'What is it? ' + hwair + euro + wo + elect;
+            //encodingSnippet = euro + wo;
 
             var encodingSample = encodingSnippet;
 
-            for (var i = 0; i < 100; i++){
+            for (var i = 0; i < 99; i++){
                 encodingSample += ' ' + encodingSnippet;
             }
+
+            encodingSample += ' zthis is salt.';
 
                              
             window.onload = function(){
@@ -51,8 +66,9 @@
             
             var file = new ejs.zip.ZipFile();
             
-            buffer.writeString('Wikipedia');
-            
+            buffer.writeString(encodingSnippet);
+
+           
             file.addFile('example.txt', 'This is some example text');
             file.addFile('moo/display.txt', 'Part two of the data');
             file.addFile('moo/cow/why would you say that.txt', 'Part two of the data');
@@ -71,7 +87,7 @@
             blahBs.position = 0;
             
             var deflater = new ejs.zip.Deflate();
-            deflater.inflate(blahBs);   
+            //deflater.inflate(blahBs);   
             
             var blahSource = '504b0304140000000800597aa4484b8faa93280000009b1e00000c0000005465727269626c652e747874edc4210100300800b02a4f408a170185a0bf26056e13fb93fd4a92244992244992244992a4ab6201504b01021400140000000800597aa4484b8faa93280000009b1e00000c00000000000000010020000000000000005465727269626c652e747874504b050600000000010001003a000000520000000000';
 
@@ -79,16 +95,31 @@
             var encSource = '504b03041400000008002087db4869c1621b650000008548000007000000656e632e747874edc9211580301400c02abf0931a6e798660998c1f01e9e0aa859da80c211811ebc3b7b69cc35ca14a50ef16eeb72cdc7ddfab39f918c31c618638c31c618638c31c618638c31c618638c31c618638c31c618638c31c618638c31c618638c31c618f3e3890f504b010214001400000008002087db4869c1621b6500000085480000070000000000000000002000000000000000656e632e747874504b05060000000001000100350000008a0000000000';
             
             var bBs = new ejs.zip.BitStream();
-            bBs.writeHexString(encSource);
+            bBs.writeHexString(blahSource);
             bBs.position = 0;
 
             
             var bZip = new ejs.zip.ZipFile(bBs);
             //console.log(bZip);
-            //var s = bZip.contents[0].uncompress();
+            var s = bZip.contents[0].uncompress();
             //console.log(s.asString());
-            
 
+            // deflate tests
+            var sourceStream = new ejs.zip.BitStream();
+            sourceStream.writeString(encodingSample);
+
+            var def = new ejs.zip.Deflate();
+            def.deflate(sourceStream);
+
+            function bootstrapTest(){
+
+                var parentN = 1000;
+                //for 
+
+                
+
+            }
+            
             //file.save();
             //file.save();
                                 
@@ -100,3 +131,4 @@
         <div id="output"></div>
     </body>
 </html>
+

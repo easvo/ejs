@@ -276,26 +276,32 @@ ejs.zip.BitStream.prototype.asHexString = function(){
  */
 ejs.zip.BitStream.prototype.writeString = function(content){
     var mask = 0x3f;
-    for (var i = 0; i < content.length;i++){
-        var a = content[i].codePointAt(0);        
-        if (a > 0x7f){ // Encode using multiple bytes            
-            
+    for (var i = 0; i < content.length;i++){        
+        var a = content[i].codePointAt(0);
+
+        if (a >= 0xD800 && a <= 0xDBFF) {
+            var s = content[i] + content[i + 1];
+            a = s.codePointAt(0);
+            i++;
+        }
+     
+        if (a > 0x7f){ // Encode using multiple bytes                        
             var b = 1;
-            var i = 0;
+            var j = 0;
             var buffer = [];
 
-            while (a > (1 << (5 - i))){
+            while (a > (1 << (5 - j))){
                 var v = (2 << 6) | (a & mask);
                 
                 buffer.push(v);
                 a >>= 6;
                 
-                i++;
+                j++;
                 b <<= 1;
                 b |= 1;                
             }
 
-            b <<= (7 - i);
+            b <<= (7 - j);
             b |= a;
 
             this.writeByte(b);

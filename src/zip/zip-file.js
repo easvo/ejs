@@ -39,8 +39,6 @@ ejs.zip.ZipFile.prototype.parseZipStream = function(stream){
         entry.filenameLength = stream.readByte(2);
         entry.extra = stream.readByte(2);
         
-        console.log(entry);
-        
         var len = entry.filenameLength;       
         
         while(len--){
@@ -57,7 +55,6 @@ ejs.zip.ZipFile.prototype.parseZipStream = function(stream){
     }
     
     if (header === ejs.zip.CENTRAL_DIRECTORY_HEADER){
-        console.log('found cd header');
         var version = stream.readByte(2);
         var versionToExtract = stream.readByte(2);
         var bitFlag = stream.readByte(2);
@@ -85,12 +82,9 @@ ejs.zip.ZipFile.prototype.parseZipStream = function(stream){
         while (len--){
             fileName += String.fromCharCode(stream.readByte(1));
         }
-        
-        console.log('filename', fileName);
     }
     
     if (header === ejs.zip.EOCD_SIGNATURE){
-        console.log('found header');
         var numberOnDisk = stream.readByte(2);
         var numberOfDisk = stream.readByte(2);
         var numberEntries = stream.readByte(2);
@@ -103,8 +97,7 @@ ejs.zip.ZipFile.prototype.parseZipStream = function(stream){
         eof = true;        
     }        
     }
-    
-    console.log(this, n);
+
 }
 
 ejs.zip.ZipFile.prototype.addFile = function(path, content){
@@ -151,7 +144,6 @@ ejs.zip.ZipFile.prototype.dateToDosDate = function(date){
 }
 
 ejs.zip.ZipFile.prototype.dosDateToDate = function(date, time){
-    console.log('called'); console.log(date);
     var year = (date >> 9) + 1980; 
     var month = ((date >> 5) & 15) - 1;
     var day = date & 31;

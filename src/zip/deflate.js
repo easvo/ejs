@@ -5,6 +5,11 @@ ejs.zip.Deflate = function(){
 ejs.zip.Deflate.prototype.MAX_BITS = 15;
 ejs.zip.Deflate.prototype.MAX_LITERAL_CODES = 286;
 
+ejs.zip.Deflate.prototype.MAX_LENGTH = 258;
+ejs.zip.Deflate.prototype.MIN_LENGTH = 3;
+
+ejs.zip.Deflate.prototype.MAX_DISTANCE = 32768;
+
 ejs.zip.Deflate.prototype.lengths = [
 { bits : 0, lengthBase : 3, code : 257 },
 { bits : 0, lengthBase : 4, code : 258 },
@@ -177,6 +182,8 @@ ejs.zip.Deflate.prototype.inflate = function(stream){
             if (d === 0) return a.code - b.code;
             else return d;
         });
+
+        console.log('used', usedLiterals);
         
         var codes = huff.canonicalize(usedLiterals);
         
@@ -195,6 +202,7 @@ ejs.zip.Deflate.prototype.inflate = function(stream){
         var sym = 0;
         var count = 0;
         
+        // Decode content
         while (sym !== 256 && count < 1000){ // To avoid infinite
             sym = this.decode(stream, literalKey);
             var length = 0;
@@ -226,9 +234,208 @@ ejs.zip.Deflate.prototype.inflate = function(stream){
 }
 
 ejs.zip.Deflate.prototype.deflate = function(stream){
+    var outputStream = new ejs.zip.BitStream();
+
+    outputStream.write(1, 1); // Block position
+    outputStream.write(2, 2); // Dynamic for the moment
+
     // Get LZ77 coding
+    var view = new Uint8Array(stream.buffer);
+
+    var literals = {};
+    var lengths = {};
+    var distances = {};
+
+    var rawDistances = [];
+    var rawLengths = [];
+
+    var content = [];
+
+    var cursor = 0;
+
+    var d = { d: 1,  l : 1 };
+
+    for (var i = 0; i < view.length; i++){        
+        var len = 0;
+
+        // Look for match before but not including current position
+        var maxl = 0;
+        var maxP = 0;
+
+        for (var j = i - 1; j > 0; j--){
+            var k = j;
+            var l = i;
+            var len = 0;
+
+            while (view[k] === view[l] && len < this.MAX_LENGTH){
+                k++; 
+                l++;
+                len++;
+            }
+
+            if (len > maxl){
+                maxl = len;
+                maxP = j;
+            }
+
+            // Short circuit if we've found a max match already
+            if (maxl === this.MAX_LENGTH) j = -1;   
+        }
+
+        if (maxl >= this.MIN_LENGTH){ // encode as distance length pair
+            var d = i - maxP;
+            l = maxl;
+            
+            content.push({
+                d : d,
+                l : l
+            });
+
+            i += maxl - 1;
+
+            var leng = this.getLengthCode(l);
+
+            literals[leng.code] = literals[leng.code] || 0;
+            literals[leng.code]++;
+            
+            var dist = this.getDistCode(d);
+            
+            distances[dist.code] = distances[dist.code] || 0;
+            distances[dist.code]++;            
+
+        } else { // write character to stream
+            var literal = view[i];
+            literals[literal] = literals[literal] || 0;
+            literals[literal]++;
+            content.push(literal);
+        }
+    }
+
+    // Add end
+    literals[256] = 1;
+    content.push(256);
+
+    var huffman = new ejs.zip.Huffman();
+    
+    var lengths = huffman.getLengths(literals);
+    var distLengths = huffman.getLengths(distances);
+
+    var contentCodes = huffman.canonicalize(lengths);
+    var distCodes = huffman.canonicalize(distLengths);
+
+    //console.log(content, literals, lengths, distances);
+
+    var codeLengthLengths = {};
+    var codeDict = {};
+
+    for (var i = 0; i < lengths.length; i++){
+        var l = lengths[i].length;
+        codeLengthLengths[l] = codeLengthLengths[l] || 0;
+        codeLengthLengths[l]++;
+        codeDict[lengths[i].code] = lengths[i];
+    }
+        
+    // Contruct alphabet. Iterate 0 - 255, see what codes are needed
+    var alphabet = [];
+        
+    for (var i = 0; i < 255; i++){
+        if (codeDict[i]){
+            alphabet.push(codeDict[i].length);
+        }else{
+            alphabet.push(0);
+        }        
+    }
+    
+    // run-length encode alphabet
+    var ac = [];
+
+    var pre = alphabet[0];
+    var n = 0;
+
+    for (var i = 1; i <= alphabet.length; i++) {
+        if (alphabet[i] === alphabet[i - 1]){
+            n++; 
+        } else {
+            if (n > 2) {
+                ac.push({ l : n + 1, v : alphabet[i - 1] });
+                n = 1;
+            } else if (n > 0) {
+                while(n--){
+                    ac.push(alphabet[i - 1]);
+                }
+            } else {
+                ac.push(alphabet[i - 1])
+            }
+            n = 0;
+        }
+    }
+
+    // Get frequency of other codes from alphabet
+    for (var i = 0; i < ac.length; i++){
+        if (ac[i].l) {
+            if (ac[i].v === 0){ // use 17 or 18
+                if (ac.l > 10){
+                    codeLengthLengths[18] = codeLengthLengths[18] || 0;
+                    codeLengthLengths[18]++;
+                } else {
+                    codeLengthLengths[17] = codeLengthLengths[17] || 0;
+                    codeLengthLengths[17]++;
+                }
+            } else {
+                codeLengthLengths[16] = codeLengthLengths[16] || 0;
+                codeLengthLengths[16]++;
+            }
+        } else if (ac[i] == 0){
+            codeLengthLengths[0] = codeLengthLengths[0] || 0;
+            codeLengthLengths[0]++;
+        }
+    }
+
+    console.log(codeLengthLengths);
+
+    var alpha = huffman.getLengths(codeLengthLengths);
+    huffman.canonicalize(alpha);
+    console.log(alpha);
+
+    cllCodes = {};
+    var maxI = 0;
+
+    for (var i = 0; i < alpha.length; i++){
+        cllCodes[alpha[i].code] = alpha[i];
+    }
+
+    for (var i = 0; i < this.order.length; i++){
+        var code = this.order[i];
+        if (cllCodes[this.order[i]]){
+            maxI = i;
+        }
+    }
+
     
 
+    console.log(cllCodes);
+
+    //var alphaLengths = 
+
+
+
+    // Get frequency distribution of characters (bytes) within run-length encoded
+}
+
+ejs.zip.Deflate.prototype.getLengthCode = function(length){
+    var i = 0;
+    while (this.lengths[i + 1] && length >= this.lengths[i + 1].lengthBase){
+        i++;
+    }
+    return this.lengths[i];
+}
+
+ejs.zip.Deflate.prototype.getDistCode = function(dist){
+    var i = 0;
+    while (this.distances[i + 1] && dist >= this.distances[i + 1].distanceBase){
+        i++;
+    }
+    return this.distances[i];
 }
 
 ejs.zip.Deflate.prototype.decode = function(stream, huffman){
@@ -247,31 +454,70 @@ ejs.zip.Deflate.prototype.decode = function(stream, huffman){
     console.log(code, 'not found');
 }
 
-ejs.zip.Deflate.prototype.decodeFlipped = function(stream, huffman){
-    var code = 0, index = 0;
-    
-    for (var i = 0; i < this.MAX_BITS; i++){
-        //code |= stream.read(1);  
-        
-        var val = stream.read(1);
-        val <<= i;
-        val |= code;
-        
-        code = val;     
-        
-        if (huffman[code] && huffman[code][i + 1]) {
-            var val = huffman[code][i + 1].code;
-            return val;
-        }
-        
-        //code <<= 1;
-    }
-    
-    console.log(code, 'not found');
-}
-
 ejs.zip.Huffman = function(){
     
+}
+
+
+/**
+ * Get the code lengths given a <code, frequency> dictionary 
+ */
+ejs.zip.Huffman.prototype.getLengths = function(freqDict){
+    var keys = Object.keys(freqDict);
+
+    console.log(keys);
+
+    var nodes = [];
+
+    for (var i = 0; i < keys.length; i++){
+        var node = new ejs.zip.HuffmanNode();
+        node.isLeaf = true;
+        node.value = +keys[i];
+        node.f = freqDict[keys[i]];
+        nodes.push(node);
+    }
+
+    while (nodes.length > 1){
+        nodes = nodes.sort(function(a, b){
+            return a.f - b.f;
+        });
+
+        var node = new ejs.zip.HuffmanNode();
+        node.zero = nodes.shift();
+        node.one = nodes.shift();
+        node.f = node.zero.f + node.one.f;
+        nodes.push(node);
+    }
+
+    var lengths = this.getDepth(nodes[0]);
+
+    lengths.sort(function(a, b){
+        if (a.length === b.length){
+            return a.code - b.code;
+        }
+        else return a.length - b.length;
+    });
+
+
+    return lengths;    
+}
+
+ejs.zip.Huffman.prototype.getDepth = function(node, depth){
+    var depths = [];
+    
+    depth = depth || 0;
+    
+    if (node.zero) depths = depths.concat(this.getDepth(node.zero, depth + 1));
+    if (node.one) depths = depths.concat(this.getDepth(node.one, depth + 1));
+
+    if (node.value !== undefined){
+        depths.push({
+            length : depth,
+            code : node.value
+        });
+    }
+    
+    return depths;
 }
 
 ejs.zip.Huffman.prototype.encode = function(source){
@@ -353,6 +599,7 @@ ejs.zip.Huffman.prototype.encode = function(source){
 }
 
 ejs.zip.Huffman.prototype.canonicalize = function(codes){
+
     var N = [0];
     var max = 0;
     var code = 0, nextCode = [];        
@@ -462,11 +709,3 @@ ejs.zip.LZ77.prototype.compress = function(input){
 ejs.zip.LZ77.prototype.decompress = function(input){
     
 }
-
-// Format
-/*
-
-  0 00000000 1 000000000000 0000
-  _ characte _ pointer      len
-
-*/
