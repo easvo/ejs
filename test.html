@@ -4,6 +4,8 @@
         <!--<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.16/d3.js"></script>-->
         <script>
         //console.log("hello");
+        var def = new ejs.zip.Deflate();   
+
             var doc = new ejs.xml.XmlDocument();
             doc.root = new ejs.xml.XmlNode('a:aria', [{name : 'help', value : 'never another'}]);
             var node = new ejs.xml.XmlNode('help', [{name : 'haha', value : 'sure'}]);
@@ -75,50 +77,57 @@
             
             var test = 'This is some example text';
             
-            var crc = file.crc32(test);
-            var adler = file.adler32(test);
-            
             var blahHex = 'edc4210100300800b02a4f408a170185a0bf26056e13fb93fd4a92244992244992244992a4ab6201';         
             var nightHex = '4d90416e85300c44f7957a8739c057afc0a2ddb0f9edae6b03865884f82b0e1f71fbc6a152bb0a0ee37933f99c510223c912ca0d52208683637c7b7df90ed4c6457582fed375b8fb81214b5aaa5c4af04dff3fea93fd1613e535b159f5e931528231a328b61346456ca6b1882648faf375ed8cbef273d5525cdd48533c4183ee17c01ab9a63975cfe093ede69f38748f13ac488cd7ca12657b1883600f1e575f39bc50ef33adad5f35ae245f3745a06ca1c387b68b4dcc1af0fef56ea034f9201934cfdc9277e84b2bd66803233399267661c5b44c62c13bb7ead5ead05c33729a2e38d7a7facdedea65e786a4d2fd00';
             
             var blahBs = new ejs.zip.BitStream();
             blahBs.writeHexString(blahHex);
-            
             blahBs.position = 0;
+
+            //def.inflate(blahBs);
             
-            var deflater = new ejs.zip.Deflate();
-            //deflater.inflate(blahBs);   
+            //blahBs.position = 0;
+                    
             
             var blahSource = '504b0304140000000800597aa4484b8faa93280000009b1e00000c0000005465727269626c652e747874edc4210100300800b02a4f408a170185a0bf26056e13fb93fd4a92244992244992244992a4ab6201504b01021400140000000800597aa4484b8faa93280000009b1e00000c00000000000000010020000000000000005465727269626c652e747874504b050600000000010001003a000000520000000000';
 
 
             var encSource = '504b03041400000008002087db4869c1621b650000008548000007000000656e632e747874edc9211580301400c02abf0931a6e798660998c1f01e9e0aa859da80c211811ebc3b7b69cc35ca14a50ef16eeb72cdc7ddfab39f918c31c618638c31c618638c31c618638c31c618638c31c618638c31c618638c31c618638c31c618638c31c618f3e3890f504b010214001400000008002087db4869c1621b6500000085480000070000000000000000002000000000000000656e632e747874504b05060000000001000100350000008a0000000000';
             
-            var bBs = new ejs.zip.BitStream();
-            bBs.writeHexString(blahSource);
-            bBs.position = 0;
+            //var bBs = new ejs.zip.BitStream();
+            //bBs.writeHexString(encSource);
+            //bBs.position = 0;            
 
             
-            var bZip = new ejs.zip.ZipFile(bBs);
-            //console.log(bZip);
-            var s = bZip.contents[0].uncompress();
-            //console.log(s.asString());
+            //var bZip = new ejs.zip.ZipFile(bBs);
+            //var bTest = new ejs.zip.BitStream(bZip.contents[0].contentBytes);
+            //console.log(bTest.asHexString());
+           // var s = bZip.contents[0].uncompress();
 
             // deflate tests
             var sourceStream = new ejs.zip.BitStream();
             sourceStream.writeString(encodingSample);
 
-            var def = new ejs.zip.Deflate();
-            def.deflate(sourceStream);
+            //console.log(encodingSamp/le);
 
-            function bootstrapTest(){
+            var oStream = def.deflate(sourceStream);
+            oStream.position = 0;
+            var inf = def.inflate(oStream);
+            console.log('Unc', inf.asString());
 
-                var parentN = 1000;
-                //for 
+            //var bs = new ejs.zip.BitStream();
 
-                
+            //bs.write(14, 4, true);
+            //bs.write(15, 4, true);
+            //bs.flush();
 
-            }
+            //bs.seek(0);
+
+            //console.log(bs.asBinaryString());
+
+            //console.log(bs.read(4));
+            //console.log(bs.read(4));
+
             
             //file.save();
             //file.save();

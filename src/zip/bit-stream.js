@@ -22,8 +22,7 @@ Object.defineProperty(ejs.zip.BitStream.prototype, 'position', {
     }
 });
 
-ejs.zip.BitStream.prototype.write = function(val, l, lsb){
-    
+ejs.zip.BitStream.prototype.write = function(val, l, lsb){    
     // Bits in value
     var bits = this.getBitLength(val);
     
@@ -34,45 +33,54 @@ ejs.zip.BitStream.prototype.write = function(val, l, lsb){
     
     // Trim if higher than bits to insert
     space = space > l ? l : space;
-    
-    // Allocate space
-    this.pending <<= space;
-    this.pendingLength += space;
-    
-    // Get from val
-    var grab = val >> (l - space);
-    
-    this.pending |= grab;
-    
+
     var mask = 0;
         
-    l -= space;
     var i = space;
     while (i--){
         mask <<= 1;
         mask |= 1;
     }
-       
-    mask <<= l;
+
+    l -= space;  
     
-    val &= ~mask;        
+    if (lsb){
+        this.pending |= (val & mask) << this.pendingLength;
+        val >>= space;
+    } else {
+        
+        this.pending <<= space;                   
+        this.pending |=  val >> (l - space);
     
-    console.log(
-        'value: ' + val,
-        'l: ' + l,  
-        'pending: ' + this.pending, 
-        'pendingLength: ' + this.pendingLength, 
-        'grab: ' + grab, 
-        'space: ' + space,     
-        'bits: ' + bits,
-        'mask: ' + mask);        
+        var mask = 0;
+                
+        var i = space;
+        while (i--){
+            mask <<= 1;
+            mask |= 1;
+        }
+
+        mask <<= l;
+        val &= ~mask;  
+    }
+
+    this.pendingLength += space;  
+    
+    // console.log(
+    //     'value: ' + val,
+    //     'l: ' + l,  
+    //     'pending: ' + this.pending, 
+    //     'pendingLength: ' + this.pendingLength, 
+    //     'space: ' + space,     
+    //     'bits: ' + bits,
+    //     'mask: ' + mask);        
        
     if (this.pendingLength === 8){
         this.writeByte(this.pending);
         this.pending = null;
         this.pendingLength = 0;
     }    
-    if (l > 0) this.write(val, l);
+    if (l > 0) this.write(val, l, lsb);
 }
 
 
@@ -88,7 +96,7 @@ ejs.zip.BitStream.prototype.getPaddedPending = function(){
  */
 ejs.zip.BitStream.prototype.flush = function(){    
     if (this.pendingLength){
-        var val = this.getPaddedPending();
+        var val = this.pending;
            
         this.writeByte(val);
         
@@ -136,6 +144,7 @@ ejs.zip.BitStream.prototype.getByteAtPosition = function(position){
 }
 
 ejs.zip.BitStream.prototype.resize = function(size){
+    //console.log(size);
     size = size === undefined ? 0 : size;
     var buffer = new ArrayBuffer(size);
     
@@ -188,17 +197,18 @@ ejs.zip.BitStream.prototype.read = function(n){
     return val;    
 }
 
-ejs.zip.BitStream.prototype.reverse = function(x){
+ejs.zip.BitStream.prototype.reverse = function(x, l){
     var r = 0;
+
+    l = l || this.getBitLength(x);
     
-    for (x >>= 1; x; x >>= 1){
+    for (x = x; x; x >>= 1){     
         r <<= 1;
         r |= x & 1;
+        l--;
     }
     
-    console.log(r);
-    
-    return r;
+    return (r << l);
 }
 
 ejs.zip.BitStream.prototype.readByte = function(n, msb, asArray){    
